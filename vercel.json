@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "buildCommand": "npm install --prefix frontend && npm run build:ui",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/meta/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/media-files/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js"
+    }
+  ]
+}

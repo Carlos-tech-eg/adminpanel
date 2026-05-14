@@ -7,3 +7,4 @@ uploads/private/*
 uploads/public-media/*
 !uploads/public-media/.gitkeep
 *.log
+.vercel

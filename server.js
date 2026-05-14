@@ -70,7 +70,6 @@ adminRouter.use("/documents", adminDocumentsRoutes);
 adminRouter.use("/messages", messagesRoutes);
 app.use("/admin", requireAuth, adminRouter);
 
-/** Ensure private upload directory exists */
 const privateUploads = path.resolve(__dirname, "uploads", "private");
 fs.mkdirSync(privateUploads, { recursive: true });
 
@@ -119,17 +118,21 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-async function start() {
-  try {
+let connectPromise;
+
+async function connectDatabase() {
+  if (mongoose.connection.readyState === 1) return;
+  if (connectPromise) return connectPromise;
+
+  connectPromise = (async () => {
     let mongoUri = MONGODB_URI;
     if (USE_MEMORY_MONGO) {
       // eslint-disable-next-line global-require
       const { MongoMemoryServer } = require("mongodb-memory-server");
       // eslint-disable-next-line no-console
-      console.log("[mongo] starting in-memory MongoDB (first run may download binaries)…");
+      console.log("[mongo] starting in-memory MongoDB (first run may download binaries)...");
       const mem = await MongoMemoryServer.create();
       mongoUri = mem.getUri();
-      // Keep reference so the process does not garbage-collect the server
       // eslint-disable-next-line no-underscore-dangle
       global.__embassyAdminMongoMemory = mem;
       // eslint-disable-next-line no-console
@@ -143,7 +146,7 @@ async function start() {
     console.log(
       "[mongo] backing store:",
       USE_MEMORY_MONGO
-        ? "in-memory (NOT your Atlas DB — set USE_MEMORY_MONGO=false in admin-panel/.env to use MONGODB_URI)"
+        ? "in-memory (NOT your Atlas DB - set USE_MEMORY_MONGO=false in admin-panel/.env to use MONGODB_URI)"
         : mongoUri.startsWith("mongodb+srv")
           ? "Atlas (mongodb+srv)"
           : "from MONGODB_URI (direct)"
@@ -164,6 +167,19 @@ async function start() {
       // eslint-disable-next-line no-console
       console.log("[demo] skipped (set SEED_DEMO_CONTENT=true to insert sample news/visas/citas)");
     }
+  })();
+
+  try {
+    await connectPromise;
+  } catch (err) {
+    connectPromise = undefined;
+    throw err;
+  }
+}
+
+async function start() {
+  try {
+    await connectDatabase();
 
     const server = app.listen(PORT, () => {
       // eslint-disable-next-line no-console
@@ -171,9 +187,9 @@ async function start() {
       // eslint-disable-next-line no-console
       console.log(`[ui]     open http://localhost:${PORT}/ after npm run build:ui`);
       // eslint-disable-next-line no-console
-      console.log(`[docs]   POST multipart /admin/documents/upload (field: file)`);
+      console.log("[docs]   POST multipart /admin/documents/upload (field: file)");
       // eslint-disable-next-line no-console
-      console.log(`[docs]   GET /admin/documents/:fileId (Consul|Admin)`);
+      console.log("[docs]   GET /admin/documents/:fileId (Consul|Admin)");
     });
 
     server.on("error", (err) => {
@@ -183,7 +199,7 @@ async function start() {
           `[fatal] Port ${PORT} is already in use (EADDRINUSE). Stop the other process or set a different PORT in admin-panel/.env (and match Vite proxy in frontend/vite.config.ts if you use npm run dev:ui).`
         );
         // eslint-disable-next-line no-console
-        console.error(`        Windows: Task Manager → end Node, or: netstat -ano | findstr :${PORT}`);
+        console.error(`        Windows: Task Manager -> end Node, or: netstat -ano | findstr :${PORT}`);
         process.exit(1);
       }
       // eslint-disable-next-line no-console
@@ -197,4 +213,21 @@ async function start() {
   }
 }
 
-start();
+async function serverlessHandler(req, res) {
+  try {
+    await connectDatabase();
+    return app(req, res);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[fatal]", err);
+    return res.status(500).json({ error: "Database connection failed" });
+  }
+}
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = serverlessHandler;
+module.exports.app = app;
+module.exports.connectDatabase = connectDatabase;
