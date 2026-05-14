@@ -28,6 +28,14 @@ const PORT = Number(process.env.PORT) || 4010;
 const DEFAULT_LOCAL_MONGO_URI = "mongodb://127.0.0.1:27017/embassy_admin";
 const USE_MEMORY_MONGO = String(process.env.USE_MEMORY_MONGO || "").toLowerCase() === "true";
 
+/** Serverless: connect Mongo only for API/admin routes so SPA + /health load when Atlas is misconfigured. */
+function routeNeedsMongoConnect(req) {
+  const p = req.path || "/";
+  if (p === "/health" || p.startsWith("/meta")) return false;
+  if (p.startsWith("/api") || p.startsWith("/admin")) return true;
+  return false;
+}
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "4mb" }));
 
@@ -47,6 +55,16 @@ app.get("/meta/demo-users", (_req, res) => {
     login: "POST /api/auth/login with { email, password }",
     seededEmails: mock ? ["admin@embassy.demo", "consul@embassy.demo", "press@embassy.demo"] : [],
   });
+});
+
+app.use(async (req, res, next) => {
+  if (!routeNeedsMongoConnect(req)) return next();
+  try {
+    await connectDatabase();
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 const publicRoutes = require("./routes/public");
@@ -142,7 +160,7 @@ async function connectDatabase() {
       mongoUri = resolveMongoUri() ?? DEFAULT_LOCAL_MONGO_URI;
     }
 
-    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15_000 });
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 30_000 });
     // eslint-disable-next-line no-console
     console.log("[mongo] connected");
     // eslint-disable-next-line no-console
@@ -217,14 +235,7 @@ async function start() {
 }
 
 async function serverlessHandler(req, res) {
-  try {
-    await connectDatabase();
-    return app(req, res);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("[fatal]", err);
-    return res.status(500).json({ error: "Database connection failed" });
-  }
+  return app(req, res);
 }
 
 if (require.main === module) {
