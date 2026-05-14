@@ -7,6 +7,8 @@ const { NewsArticle } = require("../models/NewsArticle");
 
 const router = express.Router();
 
+const CITIZEN_STATUSES = ["student", "worker", "resident", "tourist", "other"];
+
 /**
  * Shared secret so only your Next.js app can POST public forms.
  * In production, PUBLIC_FORM_SECRET is required when not using test env.
@@ -131,61 +133,91 @@ router.post(
   }
 );
 
-/**
- * After the public site saves a full registro (files + PDF), it POSTs a summary here
- * so consular staff see it in the admin panel.
- */
-router.post(
-  "/registro",
+const publicRegistroValidators = [
   requirePublicKey,
-  [
-    body("referenceCode").isString().trim().isLength({ min: 4, max: 80 }),
-    body("fullName").isString().trim().isLength({ min: 1, max: 200 }),
-    body("email").trim().isEmail(),
-    body("phone").optional().isString().trim().isLength({ max: 80 }),
-    body("passportNo").optional().isString().trim().isLength({ max: 80 }),
-    body("city").optional().isString().trim().isLength({ max: 120 }),
-    body("country").optional().isString().trim().isLength({ max: 120 }),
-    body("receiptUrl").optional().isString().trim().isLength({ max: 2000 }),
-    body("folderId").optional().isString().trim().isLength({ max: 80 }),
-    body("summary").optional().isString().isLength({ max: 7500 }),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ error: "Validation failed", details: errors.array() });
-      }
-      const referenceCode = String(req.body.referenceCode).trim().toUpperCase();
-      const email = String(req.body.email || "")
-        .toLowerCase()
-        .trim();
-      const existing = await ConsularRegistration.findOne({ referenceCode });
-      if (existing) {
-        return res.json({ ok: true, duplicate: true, id: String(existing._id) });
-      }
-      const notesParts = [];
-      if (req.body.summary) notesParts.push(String(req.body.summary).trim());
-      if (req.body.receiptUrl) notesParts.push(`Receipt: ${String(req.body.receiptUrl).trim()}`);
-      if (req.body.folderId) notesParts.push(`Folder: ${String(req.body.folderId).trim()}`);
-      const notes = notesParts.join("\n\n").slice(0, 8000);
+  body("referenceCode").isString().trim().isLength({ min: 4, max: 80 }),
+  body("fullName").isString().trim().isLength({ min: 1, max: 200 }),
+  body("email").trim().isEmail(),
+  body("phone").optional().isString().trim().isLength({ max: 80 }),
+  body("passportNo").optional().isString().trim().isLength({ max: 80 }),
+  body("city").optional().isString().trim().isLength({ max: 120 }),
+  body("country").optional().isString().trim().isLength({ max: 120 }),
+  body("receiptUrl").optional().isString().trim().isLength({ max: 2000 }),
+  body("folderId").optional().isString().trim().isLength({ max: 80 }),
+  body("summary").optional().isString().isLength({ max: 7500 }),
+  body("citizenStatus").optional().isString().isIn(CITIZEN_STATUSES),
+];
 
-      const doc = await ConsularRegistration.create({
-        fullName: req.body.fullName,
-        email,
-        phone: req.body.phone || "",
-        passportNo: req.body.passportNo || "",
-        city: req.body.city || "",
-        country: req.body.country || "Türkiye",
-        status: "New",
-        notes,
-        referenceCode,
-      });
-      return res.status(201).json({ ok: true, id: String(doc._id) });
-    } catch (err) {
-      return res.status(500).json({ error: "Failed to record registration", details: err.message });
+async function postPublicConsularRegistration(req, res) {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      // eslint-disable-next-line no-console
+      console.warn("[public-registro] validation failed", errors.array());
+      return res.status(400).json({ error: "Validation failed", details: errors.array() });
     }
+    const referenceCode = String(req.body.referenceCode).trim().toUpperCase();
+    const email = String(req.body.email || "")
+      .toLowerCase()
+      .trim();
+    // eslint-disable-next-line no-console
+    console.log("[public-registro] Received consular registration", {
+      referenceCode,
+      email,
+    });
+
+    const existing = await ConsularRegistration.findOne({ referenceCode });
+    if (existing) {
+      // eslint-disable-next-line no-console
+      console.log("[public-registro] duplicate referenceCode, skipping insert", referenceCode);
+      return res.json({ ok: true, duplicate: true, id: String(existing._id) });
+    }
+    const notesParts = [];
+    if (req.body.summary) notesParts.push(String(req.body.summary).trim());
+    if (req.body.receiptUrl) notesParts.push(`Recibo / descarga: ${String(req.body.receiptUrl).trim()}`);
+    if (req.body.folderId) notesParts.push(`Carpeta (sitio público): ${String(req.body.folderId).trim()}`);
+    const notes = notesParts.join("\n\n").slice(0, 8000);
+
+    const citizenStatus = String(req.body.citizenStatus || "").trim();
+    const receiptUrl = String(req.body.receiptUrl || "").trim();
+    const sourceFolderId = String(req.body.folderId || "").trim();
+
+    const doc = await ConsularRegistration.create({
+      fullName: req.body.fullName,
+      email,
+      phone: req.body.phone || "",
+      passportNo: req.body.passportNo || "",
+      city: req.body.city || "",
+      country: req.body.country || "Türkiye",
+      status: "New",
+      notes,
+      referenceCode,
+      citizenStatus,
+      receiptUrl,
+      sourceFolderId,
+      source: "website",
+    });
+    // eslint-disable-next-line no-console
+    console.log("[public-registro] Saved consular registration", {
+      id: String(doc._id),
+      referenceCode,
+    });
+    return res.status(201).json({ ok: true, id: String(doc._id) });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[public-registro] Failed to record registration", err);
+    return res.status(500).json({ error: "Failed to record registration", details: err.message });
   }
+}
+
+/** Legacy path — sitio público Next.js (default). */
+router.post("/registro", ...publicRegistroValidators, postPublicConsularRegistration);
+
+/** Alias explícito — mismo cuerpo y misma colección MongoDB. */
+router.post(
+  "/consular-registration",
+  ...publicRegistroValidators,
+  postPublicConsularRegistration
 );
 
 module.exports = router;

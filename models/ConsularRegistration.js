@@ -10,6 +10,17 @@ const consularRegistrationSchema = new mongoose.Schema(
     passportNo: { type: String, trim: true, default: "" },
     city: { type: String, trim: true, default: "" },
     country: { type: String, trim: true, default: "Türkiye" },
+    /** student | worker | resident | tourist | other — from public form */
+    citizenStatus: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 40,
+    },
+    /** Download receipt / bundle metadata on the public site */
+    receiptUrl: { type: String, trim: true, default: "", maxlength: 2000 },
+    sourceFolderId: { type: String, trim: true, default: "", maxlength: 80 },
+    source: { type: String, trim: true, default: "website" },
     status: { type: String, enum: REG_STATUSES, default: "New" },
     notes: { type: String, maxlength: 8000, default: "" },
     referenceCode: { type: String, trim: true, uppercase: true, sparse: true },

@@ -13,6 +13,8 @@ function refCode(prefix) {
 
 router.get("/", async (_req, res) => {
   try {
+    // eslint-disable-next-line no-console
+    console.log("[consular-registrations] Fetched consular registrations (list)");
     const rows = await ConsularRegistration.find().sort({ createdAt: -1 }).limit(500).lean();
     return res.json({ data: rows });
   } catch (err) {
@@ -28,6 +30,8 @@ router.get("/:id", [param("id").isMongoId()], async (req, res) => {
     }
     const doc = await ConsularRegistration.findById(req.params.id).lean();
     if (!doc) return res.status(404).json({ error: "Not found" });
+    // eslint-disable-next-line no-console
+    console.log("[consular-registrations] Fetched consular registration", req.params.id);
     return res.json({ data: doc });
   } catch (err) {
     return res.status(500).json({ error: "Failed to load registration", details: err.message });
@@ -94,7 +98,19 @@ router.patch(
       }
       const doc = await ConsularRegistration.findById(req.params.id);
       if (!doc) return res.status(404).json({ error: "Not found" });
-      const allowed = ["status", "notes", "fullName", "email", "phone", "passportNo", "city", "country"];
+      const allowed = [
+        "status",
+        "notes",
+        "fullName",
+        "email",
+        "phone",
+        "passportNo",
+        "city",
+        "country",
+        "citizenStatus",
+        "receiptUrl",
+        "sourceFolderId",
+      ];
       for (const k of allowed) {
         if (req.body[k] !== undefined) doc[k] = req.body[k];
       }

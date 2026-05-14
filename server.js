@@ -222,6 +222,8 @@ async function connectDatabase() {
     // eslint-disable-next-line no-console
     console.log("[mongo] connected");
     // eslint-disable-next-line no-console
+    console.log("MongoDB connected");
+    // eslint-disable-next-line no-console
     console.log(
       "[mongo] backing store:",
       USE_MEMORY_MONGO
