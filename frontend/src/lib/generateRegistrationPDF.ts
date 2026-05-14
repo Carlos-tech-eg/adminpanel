@@ -287,7 +287,7 @@ export function generateRegistrationPDF(row: RegistrationRow) {
     "Formulario de pre-registro completado",
   ];
 
-  const tableResult = autoTable(doc, {
+  autoTable(doc, {
     startY: y,
     margin: { left: MARGIN, right: MARGIN },
     head: [["N°", "DOCUMENTO", "ESTADO"]],
@@ -320,7 +320,10 @@ export function generateRegistrationPDF(row: RegistrationRow) {
     theme: "grid",
   });
 
-  y = (tableResult ? tableResult.finalY : y + 30) + 6;
+  const finalY =
+    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ?.finalY ?? y + 30;
+  y = finalY + 6;
 
   /* ====== SECTION 5 ====== */
   y = sectionHeader(doc, y, 5, "DECLARACIÓN");

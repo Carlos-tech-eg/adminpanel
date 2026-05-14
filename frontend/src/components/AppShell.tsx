@@ -2,14 +2,17 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth, type Role } from "../context/AuthContext";
 
+const staffRoles: Role[] = ["Admin", "Consul", "Press Attaché"];
+
 const nav: { to: string; label: string; end?: boolean; roles: Role[] }[] = [
-  { to: "/", label: "Resumen", end: true, roles: ["Admin", "Consul", "Press Attaché"] },
-  { to: "/registrations", label: "Registros consulares", roles: ["Admin", "Consul", "Press Attaché"] },
-  { to: "/visas", label: "Visados", roles: ["Admin", "Consul", "Press Attaché"] },
-  { to: "/appointments", label: "Citas", roles: ["Admin", "Consul", "Press Attaché"] },
-  { to: "/news", label: "Noticias", roles: ["Admin", "Consul", "Press Attaché"] },
-  { to: "/media", label: "Medios / imágenes", roles: ["Admin", "Consul", "Press Attaché"] },
-  { to: "/notices", label: "Avisos oficiales", roles: ["Admin", "Consul", "Press Attaché"] },
+  { to: "/", label: "Resumen", end: true, roles: staffRoles },
+  { to: "/registrations", label: "Registros consulares", roles: staffRoles },
+  { to: "/visas", label: "Visados", roles: staffRoles },
+  { to: "/appointments", label: "Citas", roles: staffRoles },
+  { to: "/news", label: "Noticias", roles: staffRoles },
+  { to: "/media", label: "Medios / imágenes", roles: staffRoles },
+  { to: "/notices", label: "Avisos oficiales", roles: staffRoles },
+  { to: "/contact-inquiries", label: "Mensajes web", roles: ["Admin", "Consul"] },
   { to: "/audit", label: "Auditoría", roles: ["Admin"] },
 ];
 
@@ -40,7 +43,7 @@ export default function AppShell() {
           <div className="mt-1 text-lg font-extrabold leading-tight text-slate-900">
             Guinea Ecuatorial
           </div>
-          <div className="mt-1 text-xs text-slate-500">Panel de control — Türkiye</div>
+          <div className="mt-1 text-xs text-slate-500">Panel de control - Türkiye</div>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
           {nav
@@ -83,12 +86,12 @@ export default function AppShell() {
                 ☰
               </button>
               <div className="min-w-0">
-              <div className="truncate text-sm font-extrabold text-slate-900">
-                Centro de gestión consular
-              </div>
-              <div className="truncate text-xs text-slate-500">
-                Diseño alineado con el sitio público — colores institucionales
-              </div>
+                <div className="truncate text-sm font-extrabold text-slate-900">
+                  Centro de gestión consular
+                </div>
+                <div className="truncate text-xs text-slate-500">
+                  Diseño alineado con el sitio público - colores institucionales
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">

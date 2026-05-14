@@ -10,6 +10,7 @@ import NewsPage from "./pages/NewsPage";
 import MediaPage from "./pages/MediaPage";
 import NoticesPage from "./pages/NoticesPage";
 import AuditPage from "./pages/AuditPage";
+import ContactInquiriesPage from "./pages/ContactInquiriesPage";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { token, ready } = useAuth();
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="news" element={<NewsPage />} />
         <Route path="media" element={<MediaPage />} />
         <Route path="notices" element={<NoticesPage />} />
+        <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
         <Route path="audit" element={<AuditPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

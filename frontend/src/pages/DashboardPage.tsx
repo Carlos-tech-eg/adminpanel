@@ -5,7 +5,7 @@ type Stats = {
   visaApplications: { total: number; byStatus: Record<string, number> };
   consularRegistrations: { total: number; byStatus: Record<string, number> };
   appointments: { byStatus: Record<string, number> };
-  content: { publishedNews: number; mediaAssets: number; notices: number };
+  content: { publishedNews: number; mediaAssets: number; notices: number; contactInquiries: number };
 };
 
 function StatCard({
@@ -87,7 +87,7 @@ export default function DashboardPage() {
         <StatCard title="Visados (total)" value={stats.visaApplications.total} tone="blue" />
         <StatCard title="Registros consulares" value={stats.consularRegistrations.total} tone="green" />
         <StatCard title="Citas" value={apptTotal} hint="Por estado en la sección Citas." tone="slate" />
-        <StatCard title="Noticias publicadas" value={stats.content.publishedNews} tone="green" />
+        <StatCard title="Mensajes web" value={stats.content.contactInquiries} tone="red" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -123,7 +123,7 @@ export default function DashboardPage() {
 
       <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
         <h2 className="text-lg font-extrabold text-slate-900">Contenido</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs font-bold uppercase text-slate-500">Medios</div>
             <div className="mt-1 text-2xl font-extrabold">{stats.content.mediaAssets}</div>
@@ -131,6 +131,10 @@ export default function DashboardPage() {
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs font-bold uppercase text-slate-500">Avisos</div>
             <div className="mt-1 text-2xl font-extrabold">{stats.content.notices}</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-bold uppercase text-slate-500">Noticias publicadas</div>
+            <div className="mt-1 text-2xl font-extrabold">{stats.content.publishedNews}</div>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="text-xs font-bold uppercase text-slate-500">Citas (estados)</div>

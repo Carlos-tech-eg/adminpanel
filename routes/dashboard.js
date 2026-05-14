@@ -5,6 +5,7 @@ const { Appointment } = require("../models/Appointment");
 const { NewsArticle } = require("../models/NewsArticle");
 const MediaAsset = require("../models/MediaAsset");
 const { Notice } = require("../models/Notice");
+const { ContactInquiry } = require("../models/ContactInquiry");
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.get("/stats", async (_req, res) => {
       noticesCount,
       visaTotal,
       regTotal,
+      contactTotal,
     ] = await Promise.all([
       VisaApplication.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
       ConsularRegistration.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
@@ -28,6 +30,7 @@ router.get("/stats", async (_req, res) => {
       Notice.countDocuments(),
       VisaApplication.countDocuments(),
       ConsularRegistration.countDocuments(),
+      ContactInquiry.countDocuments(),
     ]);
 
     const toMap = (arr) =>
@@ -42,6 +45,7 @@ router.get("/stats", async (_req, res) => {
           publishedNews: newsCount,
           mediaAssets: mediaCount,
           notices: noticesCount,
+          contactInquiries: contactTotal,
         },
       },
     });
