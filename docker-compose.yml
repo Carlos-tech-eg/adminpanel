@@ -1,0 +1,13 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - embassy_admin_mongo:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: embassy_admin
+
+volumes:
+  embassy_admin_mongo:

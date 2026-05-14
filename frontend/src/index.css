@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-emb-primary: #0b7a3a;
+  --color-emb-secondary: #0b5fb6;
+  --color-emb-accent: #d11b2a;
+  --color-emb-dark: #0b1f3b;
+  --color-emb-muted: #64748b;
+  --color-emb-surface: #f7f9fc;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: radial-gradient(
+      900px 500px at 12% 0%,
+      color-mix(in oklab, var(--color-emb-secondary) 18%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      800px 480px at 92% 8%,
+      color-mix(in oklab, var(--color-emb-primary) 14%, transparent),
+      transparent 55%
+    ),
+    var(--color-emb-surface);
+  color: #0f172a;
+}

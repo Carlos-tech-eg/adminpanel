@@ -1,0 +1,31 @@
+{
+  "name": "embassy-admin-panel-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Embassy administrative portal API (Express + MongoDB). Separate from the Next.js public site.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "dev:ui": "npm --prefix frontend run dev",
+    "build:ui": "npm --prefix frontend run build",
+    "create-admin": "node scripts/create-admin.js",
+    "seed:demo": "node scripts/seed-demo-if-empty.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.4"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-validator": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.3",
+    "multer": "^2.0.0"
+  }
+}
