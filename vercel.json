@@ -1,7 +1,6 @@
 {
   "version": 2,
   "buildCommand": "npm install --prefix frontend && npm run build:ui",
-  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
