@@ -182,13 +182,43 @@ async function connectDatabase() {
       // eslint-disable-next-line no-console
       console.log("[mongo] in-memory URI:", mongoUri);
     } else {
-      mongoUri = resolveMongoUri() ?? DEFAULT_LOCAL_MONGO_URI;
+      let resolved;
+      try {
+        resolved = resolveMongoUri();
+      } catch (e) {
+        connectPromise = undefined;
+        throw e;
+      }
+      const runsOnVercel = process.env.VERCEL === "1";
+      const prodLike =
+        process.env.NODE_ENV === "production" || runsOnVercel;
+      if (prodLike && !resolved) {
+        throw new Error(
+          "Database not configured: set MONGODB_URI or MONGODB_ATLAS_USER, MONGODB_ATLAS_PASSWORD, " +
+            "MONGODB_ATLAS_HOST, and MONGODB_ATLAS_DB in your environment (Vercel Project Settings → Environment Variables)."
+        );
+      }
+      mongoUri = resolved ?? DEFAULT_LOCAL_MONGO_URI;
     }
 
-    await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 30_000,
-      maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE || 10),
-    });
+    try {
+      await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 30_000,
+        maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE || 10),
+      });
+    } catch (connectErr) {
+      const msg = String(connectErr && connectErr.message);
+      if (
+        msg.includes("ECONNREFUSED") &&
+        (msg.includes("127.0.0.1:27017") || msg.includes("localhost:27017"))
+      ) {
+        throw new Error(
+          "MongoDB is not running on this machine (127.0.0.1:27017). Options: start local MongoDB, " +
+            "set MONGODB_URI or all MONGODB_ATLAS_* vars to MongoDB Atlas, or for local dev only set USE_MEMORY_MONGO=true."
+        );
+      }
+      throw connectErr;
+    }
     // eslint-disable-next-line no-console
     console.log("[mongo] connected");
     // eslint-disable-next-line no-console
