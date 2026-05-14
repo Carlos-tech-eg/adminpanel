@@ -4,11 +4,14 @@ const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 
 const { requireAuth } = require("./middleware/auth");
 const { seedUsersIfEmpty, DEMO_PASSWORD_NOTE } = require("./lib/seed");
 const { resolveMongoUri } = require("./lib/resolveMongoUri");
+const { corsOptions } = require("./lib/corsConfig");
 
 const authRoutes = require("./routes/auth");
 const noticesRoutes = require("./routes/notices");
@@ -24,6 +27,8 @@ const appointmentsRoutes = require("./routes/appointments");
 const { seedDemoContentIfEmpty } = require("./lib/seedDemoContent");
 
 const app = express();
+app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || 1) || 1);
+
 const PORT = Number(process.env.PORT) || 4010;
 const DEFAULT_LOCAL_MONGO_URI = "mongodb://127.0.0.1:27017/embassy_admin";
 const USE_MEMORY_MONGO = String(process.env.USE_MEMORY_MONGO || "").toLowerCase() === "true";
@@ -36,8 +41,23 @@ function routeNeedsMongoConnect(req) {
   return false;
 }
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
+app.use(cors(corsOptions()));
 app.use(express.json({ limit: "4mb" }));
+
+const authLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.AUTH_LOGIN_MAX_PER_WINDOW || 8),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method !== "POST",
+  message: { error: "Too many login attempts. Try again in a few minutes." },
+});
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "embassy-admin-panel-api" });
@@ -56,6 +76,8 @@ app.get("/meta/demo-users", (_req, res) => {
     seededEmails: mock ? ["admin@embassy.demo", "consul@embassy.demo", "press@embassy.demo"] : [],
   });
 });
+
+app.use("/api/auth/login", authLoginLimiter);
 
 app.use(async (req, res, next) => {
   if (!routeNeedsMongoConnect(req)) return next();
@@ -130,6 +152,9 @@ app.use((_req, res) => {
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
+  if (err && String(err.message || "").includes("CORS")) {
+    return res.status(403).json({ error: "Forbidden (origin not allowed)" });
+  }
   const status = err.status && Number.isInteger(err.status) ? err.status : 500;
   res.status(status).json({
     error: err.message || "Internal Server Error",
@@ -160,7 +185,10 @@ async function connectDatabase() {
       mongoUri = resolveMongoUri() ?? DEFAULT_LOCAL_MONGO_URI;
     }
 
-    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 30_000 });
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30_000,
+      maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE || 10),
+    });
     // eslint-disable-next-line no-console
     console.log("[mongo] connected");
     // eslint-disable-next-line no-console
