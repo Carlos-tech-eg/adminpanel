@@ -21,6 +21,7 @@ const auditLogsRoutes = require("./routes/auditLogs");
 const dashboardRoutes = require("./routes/dashboard");
 const visaApplicationsRoutes = require("./routes/visaApplications");
 const consularRegistrationsRoutes = require("./routes/consularRegistrations");
+const consularRegistrationCanonical = require("./routes/consularRegistrationCanonical");
 const newsArticlesRoutes = require("./routes/newsArticles");
 const mediaAssetsRoutes = require("./routes/mediaAssets");
 const appointmentsRoutes = require("./routes/appointments");
@@ -93,6 +94,7 @@ const publicRoutes = require("./routes/public");
 const contactInquiriesRoutes = require("./routes/contactInquiries");
 
 app.use("/api/public", publicRoutes);
+app.use("/api/consular-registration", consularRegistrationCanonical);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/contact-inquiries", requireAuth, contactInquiriesRoutes);

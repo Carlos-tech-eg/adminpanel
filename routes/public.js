@@ -1,40 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const { body, validationResult } = require("express-validator");
+const { persistPublicConsularRegistration } = require("../lib/consularPublicPersistence");
+const { requirePublicKey } = require("../lib/publicFormAuth");
 const { ContactInquiry } = require("../models/ContactInquiry");
-const { ConsularRegistration } = require("../models/ConsularRegistration");
 const { NewsArticle } = require("../models/NewsArticle");
 
 const router = express.Router();
 
 const CITIZEN_STATUSES = ["student", "worker", "resident", "tourist", "other"];
-
-/**
- * Shared secret so only your Next.js app can POST public forms.
- * In production, PUBLIC_FORM_SECRET is required when not using test env.
- */
-function requirePublicKey(req, res, next) {
-  const secret = String(process.env.PUBLIC_FORM_SECRET || "").trim();
-  const prod = process.env.NODE_ENV === "production";
-  const relax = String(process.env.ALLOW_INSECURE_PUBLIC_POST || "")
-    .trim()
-    .toLowerCase() === "true";
-
-  if (!secret) {
-    if (prod && !relax) {
-      return res.status(503).json({
-        error:
-          "Public form submission is disabled. Set PUBLIC_FORM_SECRET on the API and the same value on the website.",
-      });
-    }
-    return next();
-  }
-  const sent = String(req.get("x-embassy-public-key") || "").trim();
-  if (sent !== secret) {
-    return res.status(401).json({ error: "Invalid or missing x-embassy-public-key" });
-  }
-  return next();
-}
 
 function mapNewsRow(doc, adminBase) {
   const row = doc;
@@ -150,58 +124,32 @@ const publicRegistroValidators = [
 
 async function postPublicConsularRegistration(req, res) {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      // eslint-disable-next-line no-console
-      console.warn("[public-registro] validation failed", errors.array());
-      return res.status(400).json({ error: "Validation failed", details: errors.array() });
-    }
-    const referenceCode = String(req.body.referenceCode).trim().toUpperCase();
+    const referenceCode = String(req.body.referenceCode || "").trim().toUpperCase();
     const email = String(req.body.email || "")
       .toLowerCase()
       .trim();
     // eslint-disable-next-line no-console
-    console.log("[public-registro] Received consular registration", {
-      referenceCode,
-      email,
-    });
+    console.log("[public-registro] Received consular registration", { referenceCode, email });
 
-    const existing = await ConsularRegistration.findOne({ referenceCode });
-    if (existing) {
+    const result = await persistPublicConsularRegistration(req);
+    if (result.kind === "validation") {
+      // eslint-disable-next-line no-console
+      console.warn("[public-registro] validation failed", result.errors);
+      return res.status(400).json({ error: "Validation failed", details: result.errors });
+    }
+    if (result.kind === "duplicate") {
       // eslint-disable-next-line no-console
       console.log("[public-registro] duplicate referenceCode, skipping insert", referenceCode);
-      return res.json({ ok: true, duplicate: true, id: String(existing._id) });
+      return res.json({ ok: true, duplicate: true, id: String(result.doc._id) });
     }
-    const notesParts = [];
-    if (req.body.summary) notesParts.push(String(req.body.summary).trim());
-    if (req.body.receiptUrl) notesParts.push(`Recibo / descarga: ${String(req.body.receiptUrl).trim()}`);
-    if (req.body.folderId) notesParts.push(`Carpeta (sitio público): ${String(req.body.folderId).trim()}`);
-    const notes = notesParts.join("\n\n").slice(0, 8000);
-
-    const citizenStatus = String(req.body.citizenStatus || "").trim();
-    const receiptUrl = String(req.body.receiptUrl || "").trim();
-    const sourceFolderId = String(req.body.folderId || "").trim();
-
-    const doc = await ConsularRegistration.create({
-      fullName: req.body.fullName,
-      email,
-      phone: req.body.phone || "",
-      passportNo: req.body.passportNo || "",
-      city: req.body.city || "",
-      country: req.body.country || "Türkiye",
-      status: "New",
-      notes,
-      referenceCode,
-      citizenStatus,
-      receiptUrl,
-      sourceFolderId,
-      source: "website",
-    });
+    const doc = result.doc;
     // eslint-disable-next-line no-console
     console.log("[public-registro] Saved consular registration", {
       id: String(doc._id),
-      referenceCode,
+      referenceCode: doc.referenceCode,
     });
+    // eslint-disable-next-line no-console
+    console.log("Saved document:", doc.toObject ? doc.toObject() : doc);
     return res.status(201).json({ ok: true, id: String(doc._id) });
   } catch (err) {
     // eslint-disable-next-line no-console

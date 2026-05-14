@@ -52,7 +52,7 @@ export default function RegistrationsPage() {
   const load = useCallback(async () => {
     setErr(null);
     try {
-      const res = await api<{ data: Row[] }>("/api/consular-registrations");
+      const res = await api<{ data: Row[] }>("/api/consular-registration");
       setRows(res.data);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error");
@@ -113,6 +113,16 @@ export default function RegistrationsPage() {
           {err}
         </div>
       ) : null}
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-xs text-amber-950">
+        <p className="font-bold">Depuración temporal (API real)</p>
+        <p className="mt-1">
+          Total registros: <span className="font-mono font-semibold">{rows.length}</span> —{" "}
+          <code className="rounded bg-white/80 px-1">GET /api/consular-registration</code>
+        </p>
+        <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-white p-3 text-[11px] text-slate-800 shadow-inner">
+          {JSON.stringify(rows, null, 2)}
+        </pre>
+      </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
