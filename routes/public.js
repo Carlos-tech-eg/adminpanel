@@ -6,6 +6,8 @@ const { requirePublicKey } = require("../lib/publicFormAuth");
 const { ContactInquiry } = require("../models/ContactInquiry");
 const { NewsArticle } = require("../models/NewsArticle");
 
+const { CONSULAR_SERVICE_TYPES } = require("../lib/consularServiceTypes");
+
 const router = express.Router();
 
 const CITIZEN_STATUSES = ["student", "worker", "resident", "tourist", "other"];
@@ -25,7 +27,7 @@ function mapNewsRow(doc, adminBase) {
     dateLabel: String(row.dateLabel || ""),
     badgeLabel: String(row.badgeLabel || ""),
     badgeTone: String(row.badgeTone || "green"),
-    imageUrl: imageUrl || "/images/reunion.jpg",
+    imageUrl,
     href: String(row.href || "/noticias"),
     published: !!row.published,
     sortOrder: Number(row.sortOrder) || 0,
@@ -87,7 +89,11 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ error: "Validation failed", details: errors.array() });
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
       }
       const email = String(req.body.email || "")
         .toLowerCase()
@@ -100,9 +106,18 @@ router.post(
         message: req.body.message,
         source: req.body.source || "website",
       });
-      return res.status(201).json({ ok: true, id: String(doc._id) });
+      return res.status(201).json({
+        success: true,
+        ok: true,
+        id: String(doc._id),
+        collection: "contactinquiries",
+      });
     } catch (err) {
-      return res.status(500).json({ error: "Failed to save inquiry", details: err.message });
+      return res.status(500).json({
+        success: false,
+        error: "Failed to save inquiry",
+        details: err.message,
+      });
     }
   }
 );
@@ -120,6 +135,7 @@ const publicRegistroValidators = [
   body("folderId").optional().isString().trim().isLength({ max: 80 }),
   body("summary").optional().isString().isLength({ max: 7500 }),
   body("citizenStatus").optional().isString().isIn(CITIZEN_STATUSES),
+  body("serviceType").optional().isString().isIn(CONSULAR_SERVICE_TYPES),
 ];
 
 async function postPublicConsularRegistration(req, res) {
@@ -135,12 +151,21 @@ async function postPublicConsularRegistration(req, res) {
     if (result.kind === "validation") {
       // eslint-disable-next-line no-console
       console.warn("[public-registro] validation failed", result.errors);
-      return res.status(400).json({ error: "Validation failed", details: result.errors });
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: result.errors,
+      });
     }
     if (result.kind === "duplicate") {
       // eslint-disable-next-line no-console
       console.log("[public-registro] duplicate referenceCode, skipping insert", referenceCode);
-      return res.json({ ok: true, duplicate: true, id: String(result.doc._id) });
+      return res.json({
+        success: true,
+        ok: true,
+        duplicate: true,
+        id: String(result.doc._id),
+      });
     }
     const doc = result.doc;
     // eslint-disable-next-line no-console
@@ -150,11 +175,20 @@ async function postPublicConsularRegistration(req, res) {
     });
     // eslint-disable-next-line no-console
     console.log("Saved document:", doc.toObject ? doc.toObject() : doc);
-    return res.status(201).json({ ok: true, id: String(doc._id) });
+    return res.status(201).json({
+      success: true,
+      ok: true,
+      id: String(doc._id),
+      collection: "consularregistrations",
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[public-registro] Failed to record registration", err);
-    return res.status(500).json({ error: "Failed to record registration", details: err.message });
+    return res.status(500).json({
+      success: false,
+      error: "Failed to record registration",
+      details: err.message,
+    });
   }
 }
 

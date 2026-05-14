@@ -5,6 +5,7 @@ const { requireAuth } = require("../middleware/auth");
 const { ConsularRegistration } = require("../models/ConsularRegistration");
 const { persistPublicConsularRegistration } = require("../lib/consularPublicPersistence");
 const { requirePublicKey } = require("../lib/publicFormAuth");
+const { CONSULAR_SERVICE_TYPES } = require("../lib/consularServiceTypes");
 
 const router = express.Router();
 
@@ -23,6 +24,7 @@ const publicRegistroValidators = [
   body("folderId").optional().isString().trim().isLength({ max: 80 }),
   body("summary").optional().isString().isLength({ max: 7500 }),
   body("citizenStatus").optional().isString().isIn(CITIZEN_STATUSES),
+  body("serviceType").optional().isString().isIn(CONSULAR_SERVICE_TYPES),
 ];
 
 router.get("/", requireAuth, async (req, res) => {
@@ -37,7 +39,7 @@ router.get("/", requireAuth, async (req, res) => {
   }
   try {
     const rows = await ConsularRegistration.find().sort({ createdAt: -1 }).limit(500).lean();
-    console.log("[consular-registration] LIST count:", rows.length);
+    console.log("[consular-registration] LIST collection=consularregistrations count:", rows.length);
     return res.json({ data: rows });
   } catch (err) {
     return res.status(500).json({ error: "Failed to list registrations", details: err.message });
@@ -58,20 +60,38 @@ router.post("/", ...publicRegistroValidators, async (req, res) => {
   try {
     const result = await persistPublicConsularRegistration(req);
     if (result.kind === "validation") {
-      console.warn("[consular-registration] validation failed", result.errors);
-      return res.status(400).json({ error: "Validation failed", details: result.errors });
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: result.errors,
+      });
     }
     if (result.kind === "duplicate") {
       const doc = result.doc;
       console.log("Saved document:", doc.toObject ? doc.toObject() : doc);
-      return res.json({ ok: true, duplicate: true, id: String(doc._id) });
+      return res.json({
+        success: true,
+        ok: true,
+        duplicate: true,
+        id: String(doc._id),
+        collection: "consularregistrations",
+      });
     }
     const doc = result.doc;
     console.log("Saved document:", doc.toObject ? doc.toObject() : doc);
-    return res.status(201).json({ ok: true, id: String(doc._id) });
+    return res.status(201).json({
+      success: true,
+      ok: true,
+      id: String(doc._id),
+      collection: "consularregistrations",
+    });
   } catch (err) {
     console.error("[consular-registration] Failed to record registration", err);
-    return res.status(500).json({ error: "Failed to record registration", details: err.message });
+    return res.status(500).json({
+      success: false,
+      error: "Failed to record registration",
+      details: err.message,
+    });
   }
 });
 

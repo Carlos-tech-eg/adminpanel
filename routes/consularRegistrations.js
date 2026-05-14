@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const { body, param, validationResult } = require("express-validator");
 const { ConsularRegistration, REG_STATUSES } = require("../models/ConsularRegistration");
+const { CONSULAR_SERVICE_TYPES } = require("../lib/consularServiceTypes");
 const { writeAuditLog } = require("../lib/audit");
 const { requireRoles } = require("../middleware/rbac");
 
@@ -13,9 +14,9 @@ function refCode(prefix) {
 
 router.get("/", async (_req, res) => {
   try {
-    // eslint-disable-next-line no-console
-    console.log("[consular-registrations] Fetched consular registrations (list)");
     const rows = await ConsularRegistration.find().sort({ createdAt: -1 }).limit(500).lean();
+    // eslint-disable-next-line no-console
+    console.log("[consular-registrations] LIST collection=consularregistrations count=%s", rows.length);
     return res.json({ data: rows });
   } catch (err) {
     return res.status(500).json({ error: "Failed to list registrations", details: err.message });
@@ -89,6 +90,15 @@ router.patch(
     body("status").optional().isString().isIn(REG_STATUSES),
     body("notes").optional().isString().isLength({ max: 8000 }),
     body("fullName").optional().isString().trim().isLength({ min: 1, max: 200 }),
+    body("email").optional().isEmail().normalizeEmail(),
+    body("phone").optional().isString().trim().isLength({ max: 80 }),
+    body("passportNo").optional().isString().trim().isLength({ max: 80 }),
+    body("city").optional().isString().trim().isLength({ max: 120 }),
+    body("country").optional().isString().trim().isLength({ max: 120 }),
+    body("citizenStatus").optional().isString().isLength({ max: 40 }),
+    body("serviceType").optional().isString().isIn(CONSULAR_SERVICE_TYPES),
+    body("receiptUrl").optional().isString().isLength({ max: 2000 }),
+    body("sourceFolderId").optional().isString().isLength({ max: 80 }),
   ],
   async (req, res) => {
     try {
@@ -108,6 +118,7 @@ router.patch(
         "city",
         "country",
         "citizenStatus",
+        "serviceType",
         "receiptUrl",
         "sourceFolderId",
       ];

@@ -16,6 +16,7 @@ const { requireAuth } = require("./middleware/auth");
 const { seedUsersIfEmpty, DEMO_PASSWORD_NOTE } = require("./lib/seed");
 const { resolveMongoUri } = require("./lib/resolveMongoUri");
 const { corsOptions } = require("./lib/corsConfig");
+const { getHealthPayload } = require("./lib/healthPayload");
 
 const authRoutes = require("./routes/auth");
 const noticesRoutes = require("./routes/notices");
@@ -65,17 +66,7 @@ const authLoginLimiter = rateLimit({
 });
 
 app.get("/health", (_req, res) => {
-  const publicFormSecretConfigured = Boolean(
-    String(process.env.PUBLIC_FORM_SECRET || process.env.EMBASSY_PUBLIC_FORM_SECRET || "").trim()
-  );
-  res.json({
-    ok: true,
-    service: "embassy-admin-panel-api",
-    vercel: process.env.VERCEL === "1",
-    nodeEnv: process.env.NODE_ENV || null,
-    /** Si es false en producción, POST públicos devuelven 503 hasta definir PUBLIC_FORM_SECRET y redeploy. */
-    publicFormSecretConfigured,
-  });
+  res.json(getHealthPayload());
 });
 
 app.get("/meta/demo-users", (_req, res) => {
