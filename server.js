@@ -1,4 +1,8 @@
-require("dotenv").config();
+/** Vercel injects env at runtime; avoid loading a stray local .env that could mask dashboard vars. */
+if (process.env.VERCEL !== "1") {
+  // eslint-disable-next-line global-require
+  require("dotenv").config();
+}
 
 const path = require("path");
 const fs = require("fs");
@@ -61,7 +65,17 @@ const authLoginLimiter = rateLimit({
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "embassy-admin-panel-api" });
+  const publicFormSecretConfigured = Boolean(
+    String(process.env.PUBLIC_FORM_SECRET || process.env.EMBASSY_PUBLIC_FORM_SECRET || "").trim()
+  );
+  res.json({
+    ok: true,
+    service: "embassy-admin-panel-api",
+    vercel: process.env.VERCEL === "1",
+    nodeEnv: process.env.NODE_ENV || null,
+    /** Si es false en producción, POST públicos devuelven 503 hasta definir PUBLIC_FORM_SECRET y redeploy. */
+    publicFormSecretConfigured,
+  });
 });
 
 app.get("/meta/demo-users", (_req, res) => {
