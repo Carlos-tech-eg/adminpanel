@@ -1,6 +1,11 @@
 {
   "version": 2,
   "buildCommand": "npm install --prefix frontend && npm run build:ui",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "frontend/dist/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

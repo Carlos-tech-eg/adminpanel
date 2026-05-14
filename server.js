@@ -135,6 +135,7 @@ app.use((req, res, next) => {
     req.path.startsWith("/admin") ||
     req.path.startsWith("/media-files") ||
     req.path.startsWith("/meta") ||
+    req.path.startsWith("/assets") ||
     req.path === "/health"
   ) {
     return next();
