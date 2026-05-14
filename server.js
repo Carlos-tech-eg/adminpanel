@@ -8,6 +8,7 @@ const mongoose = require("mongoose");
 
 const { requireAuth } = require("./middleware/auth");
 const { seedUsersIfEmpty, DEMO_PASSWORD_NOTE } = require("./lib/seed");
+const { resolveMongoUri } = require("./lib/resolveMongoUri");
 
 const authRoutes = require("./routes/auth");
 const noticesRoutes = require("./routes/notices");
@@ -24,7 +25,7 @@ const { seedDemoContentIfEmpty } = require("./lib/seedDemoContent");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4010;
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/embassy_admin";
+const DEFAULT_LOCAL_MONGO_URI = "mongodb://127.0.0.1:27017/embassy_admin";
 const USE_MEMORY_MONGO = String(process.env.USE_MEMORY_MONGO || "").toLowerCase() === "true";
 
 app.use(cors({ origin: true, credentials: true }));
@@ -125,7 +126,7 @@ async function connectDatabase() {
   if (connectPromise) return connectPromise;
 
   connectPromise = (async () => {
-    let mongoUri = MONGODB_URI;
+    let mongoUri;
     if (USE_MEMORY_MONGO) {
       // eslint-disable-next-line global-require
       const { MongoMemoryServer } = require("mongodb-memory-server");
@@ -137,6 +138,8 @@ async function connectDatabase() {
       global.__embassyAdminMongoMemory = mem;
       // eslint-disable-next-line no-console
       console.log("[mongo] in-memory URI:", mongoUri);
+    } else {
+      mongoUri = resolveMongoUri() ?? DEFAULT_LOCAL_MONGO_URI;
     }
 
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15_000 });
@@ -146,10 +149,10 @@ async function connectDatabase() {
     console.log(
       "[mongo] backing store:",
       USE_MEMORY_MONGO
-        ? "in-memory (NOT your Atlas DB - set USE_MEMORY_MONGO=false in admin-panel/.env to use MONGODB_URI)"
+        ? "in-memory (NOT your Atlas DB - set USE_MEMORY_MONGO=false in admin-panel/.env to use MONGODB_URI or MONGODB_ATLAS_*)"
         : mongoUri.startsWith("mongodb+srv")
           ? "Atlas (mongodb+srv)"
-          : "from MONGODB_URI (direct)"
+          : "from MONGODB_URI / local default"
     );
 
     const seedResult = await seedUsersIfEmpty();

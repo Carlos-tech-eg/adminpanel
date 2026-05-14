@@ -9,9 +9,10 @@
 require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
+const { resolveMongoUri } = require("../lib/resolveMongoUri");
 const { User, ROLES } = require("../models/User");
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/embassy_admin";
+const DEFAULT_LOCAL_URI = "mongodb://127.0.0.1:27017/embassy_admin";
 
 async function main() {
   const argv = process.argv.slice(2);
@@ -43,7 +44,8 @@ async function main() {
     process.exit(1);
   }
 
-  await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 15_000 });
+  const uri = resolveMongoUri() ?? DEFAULT_LOCAL_URI;
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 15_000 });
   const passwordHash = await bcrypt.hash(password, 12);
 
   const existing = await User.findOne({ email });
