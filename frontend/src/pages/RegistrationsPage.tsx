@@ -49,6 +49,7 @@ export default function RegistrationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     setErr(null);
@@ -99,6 +100,25 @@ export default function RegistrationsPage() {
     }
   }
 
+  const search = query.trim().toLowerCase();
+  const filteredRows = search
+    ? rows.filter((r) =>
+        [
+          r.referenceCode,
+          r.fullName,
+          r.email,
+          r.phone,
+          r.passportNo,
+          r.country,
+          r.city,
+          r.status,
+          r.citizenStatus,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search))
+      )
+    : rows;
+
   return (
     <div className="space-y-6">
       <div>
@@ -107,6 +127,36 @@ export default function RegistrationsPage() {
         </h1>
         <p className="mt-2 text-slate-600">
           Envíos desde el sitio web (MongoDB). Datos reales, sin simulaciones.
+        </p>
+      </div>
+      <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm">
+        <label
+          htmlFor="registration-search"
+          className="text-xs font-bold uppercase tracking-wide text-slate-500"
+        >
+          Buscar registro
+        </label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            id="registration-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Ej. REG-2026-L53XQS, nombre, email, pasaporte..."
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emb-secondary focus:ring-2 focus:ring-emb-secondary/15"
+          />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Limpiar
+            </button>
+          ) : null}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          {filteredRows.length} de {rows.length} registros
         </p>
       </div>
       {err ? (
@@ -130,7 +180,7 @@ export default function RegistrationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((r) => (
+              {filteredRows.map((r) => (
                 <tr key={r._id} className="hover:bg-slate-50/60">
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">
                     {r.referenceCode || "—"}
@@ -193,6 +243,16 @@ export default function RegistrationsPage() {
                   </td>
                 </tr>
               ))}
+              {!filteredRows.length ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    No se encontraron registros con esa búsqueda.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
