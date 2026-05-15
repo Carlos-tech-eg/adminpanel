@@ -27,6 +27,7 @@ const consularRegistrationSchema = new mongoose.Schema(
     /** Download receipt / bundle metadata on the public site */
     receiptUrl: { type: String, trim: true, default: "", maxlength: 2000 },
     sourceFolderId: { type: String, trim: true, default: "", maxlength: 80 },
+    photoDataUrl: { type: String, default: "", maxlength: 5_000_000 },
     source: { type: String, trim: true, default: "website" },
     status: { type: String, enum: REG_STATUSES, default: "New" },
     notes: { type: String, maxlength: 8000, default: "" },

@@ -22,6 +22,7 @@ const publicRegistroValidators = [
   body("country").optional().isString().trim().isLength({ max: 120 }),
   body("receiptUrl").optional().isString().trim().isLength({ max: 2000 }),
   body("folderId").optional().isString().trim().isLength({ max: 80 }),
+  body("photoDataUrl").optional().isString().isLength({ max: 5_000_000 }),
   body("summary").optional().isString().isLength({ max: 7500 }),
   body("citizenStatus").optional().isString().isIn(CITIZEN_STATUSES),
   body("serviceType").optional().isString().isIn(CONSULAR_SERVICE_TYPES),

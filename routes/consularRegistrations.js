@@ -99,6 +99,7 @@ router.patch(
     body("serviceType").optional().isString().isIn(CONSULAR_SERVICE_TYPES),
     body("receiptUrl").optional().isString().isLength({ max: 2000 }),
     body("sourceFolderId").optional().isString().isLength({ max: 80 }),
+    body("photoDataUrl").optional().isString().isLength({ max: 5_000_000 }),
   ],
   async (req, res) => {
     try {
@@ -121,6 +122,7 @@ router.patch(
         "serviceType",
         "receiptUrl",
         "sourceFolderId",
+        "photoDataUrl",
       ];
       for (const k of allowed) {
         if (req.body[k] !== undefined) doc[k] = req.body[k];

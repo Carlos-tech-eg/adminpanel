@@ -24,6 +24,7 @@ type RegistrationRow = {
   status: string;
   notes?: string;
   referenceCode?: string;
+  photoDataUrl?: string;
   createdAt?: string;
 };
 
@@ -164,11 +165,20 @@ export function generateRegistrationPDF(row: RegistrationRow) {
   doc.setDrawColor(...LIGHT_GRAY);
   doc.setFillColor(245, 245, 245);
   doc.rect(photoX, photoY, photoW, photoH, "FD");
-  doc.setFontSize(7);
-  doc.setTextColor(...GRAY);
-  doc.text("FOTO", photoX + photoW / 2, photoY + photoH / 2, {
-    align: "center",
-  });
+  if (row.photoDataUrl?.startsWith("data:image/")) {
+    try {
+      const imageFormat = row.photoDataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+      doc.addImage(row.photoDataUrl, imageFormat, photoX + 1.5, photoY + 1.5, photoW - 3, photoH - 3);
+    } catch {
+      doc.setFontSize(7);
+      doc.setTextColor(...GRAY);
+      doc.text("FOTO", photoX + photoW / 2, photoY + photoH / 2, { align: "center" });
+    }
+  } else {
+    doc.setFontSize(7);
+    doc.setTextColor(...GRAY);
+    doc.text("FOTO", photoX + photoW / 2, photoY + photoH / 2, { align: "center" });
+  }
   doc.rect(photoX - 1, photoY - 1, photoW + 2, photoH + 2, "S");
 
   labelValue(doc, col1X, y + 2, "Nombre completo", row.fullName, col2V);

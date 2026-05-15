@@ -68,7 +68,7 @@ app.use(
   })
 );
 app.use(cors(corsOptions()));
-app.use(express.json({ limit: "4mb" }));
+app.use(express.json({ limit: "8mb" }));
 
 const authLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

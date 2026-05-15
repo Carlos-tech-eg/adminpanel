@@ -17,6 +17,7 @@ type Row = {
   citizenStatus?: string;
   receiptUrl?: string;
   sourceFolderId?: string;
+  photoDataUrl?: string;
   source?: string;
   createdAt?: string;
   updatedAt?: string;
