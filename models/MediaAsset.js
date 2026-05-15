@@ -7,6 +7,8 @@ const mediaAssetSchema = new mongoose.Schema(
     storedFileName: { type: String, required: true },
     originalName: { type: String, default: "" },
     mimeType: { type: String, default: "image/jpeg" },
+    size: { type: Number, default: 0 },
+    data: { type: Buffer, select: false },
     alt: { type: String, trim: true, default: "" },
     category: { type: String, trim: true, default: "general" },
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

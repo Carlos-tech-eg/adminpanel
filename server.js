@@ -31,6 +31,7 @@ const newsArticlesRoutes = require("./routes/newsArticles");
 const mediaAssetsRoutes = require("./routes/mediaAssets");
 const appointmentsRoutes = require("./routes/appointments");
 const { seedDemoContentIfEmpty } = require("./lib/seedDemoContent");
+const MediaAsset = require("./models/MediaAsset");
 
 const app = express();
 app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || 1) || 1);
@@ -39,11 +40,24 @@ const PORT = Number(process.env.PORT) || 4010;
 const DEFAULT_LOCAL_MONGO_URI = "mongodb://127.0.0.1:27017/embassy_admin";
 const USE_MEMORY_MONGO = String(process.env.USE_MEMORY_MONGO || "").toLowerCase() === "true";
 
+function ensureWritableDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    if (process.env.VERCEL === "1") {
+      // Vercel's deployment filesystem is read-only; uploads are stored in MongoDB.
+      return;
+    }
+    throw err;
+  }
+}
+
 /** Serverless: connect Mongo only for API/admin routes so SPA + /health load when Atlas is misconfigured. */
 function routeNeedsMongoConnect(req) {
   const p = req.path || "/";
   if (p === "/health" || p.startsWith("/meta")) return false;
   if (p.startsWith("/api") || p.startsWith("/admin")) return true;
+  if (p.startsWith("/media-files")) return true;
   return false;
 }
 
@@ -119,10 +133,30 @@ adminRouter.use("/messages", messagesRoutes);
 app.use("/admin", requireAuth, adminRouter);
 
 const privateUploads = path.resolve(__dirname, "uploads", "private");
-fs.mkdirSync(privateUploads, { recursive: true });
+ensureWritableDir(privateUploads);
 
 const publicMedia = path.resolve(__dirname, "uploads", "public-media");
-fs.mkdirSync(publicMedia, { recursive: true });
+ensureWritableDir(publicMedia);
+app.get("/media-files/:filename", async (req, res, next) => {
+  try {
+    const filename = path.basename(String(req.params.filename || ""));
+    if (!filename || filename !== req.params.filename) {
+      return res.status(400).json({ error: "Invalid filename" });
+    }
+    const doc = await MediaAsset.findOne({ storedFileName: filename })
+      .select("+data mimeType originalName")
+      .lean();
+    if (!doc || !doc.data) return next();
+    res.setHeader("Content-Type", doc.mimeType || "application/octet-stream");
+    res.setHeader("Cache-Control", process.env.NODE_ENV === "production" ? "public, max-age=604800" : "no-store");
+    if (doc.originalName) {
+      res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(doc.originalName)}"`);
+    }
+    return res.send(Buffer.from(doc.data));
+  } catch (err) {
+    return next(err);
+  }
+});
 app.use(
   "/media-files",
   express.static(publicMedia, {

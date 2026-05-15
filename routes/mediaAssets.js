@@ -17,19 +17,8 @@ function ensureDir() {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination(_req, _file, cb) {
-    ensureDir();
-    cb(null, UPLOAD_DIR);
-  },
-  filename(_req, file, cb) {
-    const ext = path.extname(file.originalname) || ".jpg";
-    cb(null, `${crypto.randomUUID()}${ext}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter(_req, file, cb) {
     const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -70,12 +59,16 @@ router.post(
       }
       if (!req.file) return res.status(400).json({ error: "Missing file (field name: file)" });
 
-      const publicUrl = `/media-files/${req.file.filename}`;
+      const ext = path.extname(req.file.originalname) || ".jpg";
+      const storedFileName = `${crypto.randomUUID()}${ext}`;
+      const publicUrl = `/media-files/${storedFileName}`;
       const doc = await MediaAsset.create({
         publicUrl,
-        storedFileName: req.file.filename,
+        storedFileName,
         originalName: req.file.originalname || "",
         mimeType: req.file.mimetype,
+        size: req.file.size || req.file.buffer?.length || 0,
+        data: req.file.buffer,
         alt: req.body.alt || "",
         category: req.body.category || "general",
         uploadedBy: new mongoose.Types.ObjectId(req.user.id),
