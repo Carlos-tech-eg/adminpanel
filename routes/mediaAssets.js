@@ -1,6 +1,5 @@
 const express = require("express");
 const path = require("path");
-const fs = require("fs");
 const crypto = require("crypto");
 const multer = require("multer");
 const mongoose = require("mongoose");
@@ -10,12 +9,6 @@ const { writeAuditLog } = require("../lib/audit");
 const { requireRoles } = require("../middleware/rbac");
 
 const router = express.Router();
-
-const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads", "public-media");
-
-function ensureDir() {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -134,8 +127,6 @@ router.delete(
       }
       const doc = await MediaAsset.findById(req.params.id);
       if (!doc) return res.status(404).json({ error: "Not found" });
-      const abs = path.resolve(UPLOAD_DIR, doc.storedFileName);
-      if (abs.startsWith(UPLOAD_DIR) && fs.existsSync(abs)) fs.unlinkSync(abs);
       await doc.deleteOne();
       await writeAuditLog({
         user: req.user,
