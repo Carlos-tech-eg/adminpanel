@@ -55,10 +55,56 @@ export async function api<T = unknown>(
   return data as T;
 }
 
+const MAX_IMAGE_UPLOAD_BYTES = 1.8 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1800;
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) reject(new Error("No se pudo preparar la imagen"));
+        else resolve(blob);
+      },
+      type,
+      quality
+    );
+  });
+}
+
+async function compressImageForUpload(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.size <= MAX_IMAGE_UPLOAD_BYTES) return file;
+
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    let quality = 0.82;
+    let blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    while (blob.size > MAX_IMAGE_UPLOAD_BYTES && quality > 0.55) {
+      quality -= 0.08;
+      blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    }
+
+    const name = file.name.replace(/\.[^.]+$/, "") || "image";
+    return new File([blob], `${name}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export async function uploadMedia(file: File, alt?: string, category?: string) {
   const token = getToken();
+  const uploadFile = await compressImageForUpload(file);
   const fd = new FormData();
-  fd.append("file", file);
+  fd.append("file", uploadFile);
   if (alt) fd.append("alt", alt);
   if (category) fd.append("category", category);
   const res = await fetch("/api/media/upload", {
