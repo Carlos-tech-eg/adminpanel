@@ -10,6 +10,13 @@ const consularRegistrationSchema = new mongoose.Schema(
     passportNo: { type: String, trim: true, default: "" },
     city: { type: String, trim: true, default: "" },
     country: { type: String, trim: true, default: "Türkiye" },
+    /** Trámite solicitado (formulario web): visa, pasaporte, etc. */
+    serviceType: {
+      type: String,
+      trim: true,
+      default: "other",
+      maxlength: 40,
+    },
     /** student | worker | resident | tourist | other — from public form */
     citizenStatus: {
       type: String,

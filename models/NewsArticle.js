@@ -12,7 +12,7 @@ const newsArticleSchema = new mongoose.Schema(
     dateLabel: { type: String, trim: true, default: "" },
     badgeLabel: { type: String, trim: true, default: "Noticia" },
     badgeTone: { type: String, enum: BADGE_TONES, default: "green" },
-    imageUrl: { type: String, trim: true, default: "/images/reunion.jpg" },
+    imageUrl: { type: String, trim: true, default: "" },
     published: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
