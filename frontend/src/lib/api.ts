@@ -50,7 +50,22 @@ export async function api<T = unknown>(
   if (!res.ok) {
     invalidateSessionIfUnauthorized(res.status);
     const err = data as { error?: string; details?: unknown };
-    throw new Error(err.error || `HTTP ${res.status}`);
+    let msg = err.error || `HTTP ${res.status}`;
+    const d = err.details;
+    if (Array.isArray(d) && d.length) {
+      const parts = d.map((x) => {
+        if (typeof x === "object" && x !== null && "msg" in x) return String((x as { msg: string }).msg);
+        try {
+          return JSON.stringify(x);
+        } catch {
+          return String(x);
+        }
+      });
+      msg += ` (${parts.join("; ")})`;
+    } else if (typeof d === "string" && d.trim()) {
+      msg += ` (${d.trim()})`;
+    }
+    throw new Error(msg);
   }
   return data as T;
 }

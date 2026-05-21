@@ -24,7 +24,7 @@ const upload = multer({
 
 router.get("/", async (_req, res) => {
   try {
-    const rows = await MediaAsset.find().sort({ createdAt: -1 }).limit(300).lean();
+    const rows = await MediaAsset.find().select("-data").sort({ createdAt: -1 }).limit(300).lean();
     return res.json({ data: rows });
   } catch (err) {
     return res.status(500).json({ error: "Failed to list media", details: err.message });
@@ -75,7 +75,20 @@ router.post(
         details: publicUrl,
       });
 
-      return res.status(201).json({ data: doc });
+      return res.status(201).json({
+        data: {
+          _id: doc._id,
+          publicUrl: doc.publicUrl,
+          storedFileName: doc.storedFileName,
+          originalName: doc.originalName,
+          mimeType: doc.mimeType,
+          size: doc.size,
+          alt: doc.alt,
+          category: doc.category,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+        },
+      });
     } catch (err) {
       return res.status(500).json({ error: "Upload failed", details: err.message });
     }
@@ -108,7 +121,8 @@ router.patch(
         targetId: String(doc._id),
         details: doc.publicUrl,
       });
-      return res.json({ data: doc });
+      const safe = await MediaAsset.findById(doc._id).select("-data").lean();
+      return res.json({ data: safe });
     } catch (err) {
       return res.status(500).json({ error: "Failed to update media", details: err.message });
     }

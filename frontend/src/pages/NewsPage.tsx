@@ -23,6 +23,20 @@ function validateCoverFile(f: File): string | null {
   return null;
 }
 
+function buildNewsPayload(form: Partial<Article>, imageUrl: string) {
+  return {
+    title: form.title ?? "",
+    excerpt: form.excerpt ?? "",
+    content: form.content ?? "",
+    dateLabel: form.dateLabel ?? "",
+    badgeLabel: form.badgeLabel ?? "",
+    badgeTone: form.badgeTone ?? "green",
+    imageUrl,
+    href: form.href ?? "/noticias",
+    published: Boolean(form.published),
+  };
+}
+
 export default function NewsPage() {
   const { can } = useAuth();
   const edit = can(["Admin", "Consul", "Press Attaché"]);
@@ -128,7 +142,7 @@ export default function NewsPage() {
         const up = await uploadMedia(coverFile, form.title?.trim() || "portada", "news");
         imageUrl = up.data.publicUrl;
       }
-      const payload = { ...form, imageUrl };
+      const payload = buildNewsPayload(form, imageUrl);
       if (editing) {
         await api(`/api/news/${editing._id}`, { method: "PATCH", json: payload });
       } else {

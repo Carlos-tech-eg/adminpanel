@@ -7,6 +7,31 @@ const { requireRoles } = require("../middleware/rbac");
 
 const router = express.Router();
 
+/** Never spread req.body into Mongoose — clients may send _id / timestamps / lean extras and break saves. */
+const NEWS_WRITABLE_FIELDS = [
+  "title",
+  "excerpt",
+  "content",
+  "href",
+  "dateLabel",
+  "badgeLabel",
+  "badgeTone",
+  "imageUrl",
+  "published",
+  "sortOrder",
+];
+
+function pickWritableNewsFields(body) {
+  const out = {};
+  for (const key of NEWS_WRITABLE_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(body, key)) continue;
+    let val = body[key];
+    if (key === "badgeTone" && (val === "" || val == null)) continue;
+    out[key] = val;
+  }
+  return out;
+}
+
 router.get("/", async (_req, res) => {
   try {
     const rows = await NewsArticle.find().sort({ sortOrder: -1, updatedAt: -1 }).limit(200).lean();
@@ -37,8 +62,9 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({ error: "Validation failed", details: errors.array() });
       }
+      const writable = pickWritableNewsFields(req.body);
       const doc = await NewsArticle.create({
-        ...req.body,
+        ...writable,
         updatedBy: new mongoose.Types.ObjectId(req.user.id),
       });
       await writeAuditLog({
@@ -79,7 +105,8 @@ router.patch(
       }
       const doc = await NewsArticle.findById(req.params.id);
       if (!doc) return res.status(404).json({ error: "Not found" });
-      Object.assign(doc, req.body);
+      const writable = pickWritableNewsFields(req.body);
+      Object.assign(doc, writable);
       doc.updatedBy = new mongoose.Types.ObjectId(req.user.id);
       await doc.save();
       await writeAuditLog({
